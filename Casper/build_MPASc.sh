@@ -1,31 +1,32 @@
-#!/bin/bash -l 
-#SBATCH -J MPAS_gpu
-#SBATCH -n 1
-#SBATCH -N 1
-#SBATCH --tasks-per-node=1
-#SBATCH -t 00:30:00
-#SBATCH -p dav
-#SBATCH -A NTDD0002
-#SBATCH --gres=gpu:v100:4
-#SBATCH -o gpu.out
-#SBATCH --mem 16000
+#!/bin/bash -l
+module use /glade/work/cponder/SHARE/Modules/Latest
+module use /glade/work/cponder/SHARE/Modules/Legacy
+
+module use --append /glade/work/cponder/SHARE/Modules/Bundles
+
+for dir in /glade/work/cponder/SHARE/Modules/PrgEnv/*/*
+do
+    module use --append $dir
+done
 
 module purge
-export PATH=/glade/work/ssuresh/1810pgi/linux86-64/18.10/bin/:$PATH
-export LD_LIBRARY_PATH=/glade/work/ssuresh/1810pgi/linux86-64/18.10/lib/:$LD_LIBRARY_PATH
-export LD_LIBRARY_PATH=/glade/work/ssuresh/1810pgi/openmpi/lib/:$LD_LIBRARY_PATH
-export PATH=/glade/work/ssuresh/1810pgi/openmpi/bin/:$PATH
+module load PrgEnv/PGI+OpenMPI/2019-04-30
+module load pio
 
+module list
+which mpif90
+mpif90 -V
+mpif90 -show
 
-export PNETCDF=/glade/work/ssuresh/1810pgi/pgi1810_lib/libs-pgi1810/
-export NETCDF=/glade/work/ssuresh/1810pgi/pgi1810_lib/libs-pgi1810/
-export PIO=/glade/work/ssuresh/1810pgi/pgi1810_lib/libs-pgi1810/
-export MPAS_EXTERNAL_LIBS="-L/glade/work/ssuresh/1810pgi/pgi1810_lib/libs-pgi1810/lib/ -lhdf5_hl -lhdf5 -ldl -lz"
-export MPAS_EXTERNAL_INCLUDES="-I/glade/work/ssuresh/1810pgi/pgi1810_lib/libs-pgi1810/include"
 ulimit -s unlimited
+module list
+export NETCDF=$NETCDF_C
+export NETCDFF=$NETCDF_F
+#export NETCDF=/glade/work/cponder/SHARE/Utils/NetCDF-C/4.6.3/PGI-19.3_OpenMPI-3.1.3_PNetCDF-1.11.0_HDF5-1.10.5/
+#export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/glade/work/cponder/SHARE/Utils/NetCDF-C/4.6.3/PGI-19.3_OpenMPI-3.1.3_PNetCDF-1.11.0_HDF5-1.10.5/lib/
 
 echo $LD_LIBRARY_PATH
-cd /gpfs/fs1/scratch/slaksh/mcworkshop/MPAS
+cd /gpfs/fs1/work/slaksh/pr31_merge/MPAS
 
 make clean CORE=atmosphere
 make pgi CORE=atmosphere OPENACC=true PRECISION=single USE_PIO2=true

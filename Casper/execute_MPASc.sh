@@ -1,45 +1,53 @@
 #!/bin/bash -l
 
 #SBATCH -J MPAS_gpu
-#SBATCH -n 4
+#SBATCH -n 8
 #SBATCH -N 1
-#SBATCH --tasks-per-node=4
-#SBATCH -t 04:00:00
+#SBATCH --tasks-per-node=8
+#SBATCH -t 00:20:00
 #SBATCH -p dav
 #SBATCH -A NTDD0002
-#SBATCH --gres=gpu:v100:4
+#SBATCH --gres=gpu:v100:8
 #SBATCH -o gpu.out
 #SBATCH --mem=0
-#SBATCH --exclusive
+##SBATCH --reservation casper27_muram
 
+#Total number of MPI ranks provided by n=N*tasks_per_node
+unset SLURM_MEM_PER_NODE
+#this is necessary to see the modules built by carl
+module use /glade/work/cponder/SHARE/Modules/Latest
+module use /glade/work/cponder/SHARE/Modules/Legacy
+
+module use --append /glade/work/cponder/SHARE/Modules/Bundles
+
+for dir in /glade/work/cponder/SHARE/Modules/PrgEnv/*/*
+do
+    module use --append $dir
+done
 
 module purge
-export PATH=/glade/work/ssuresh/1810pgi/linux86-64/18.10/bin/:$PATH
-export LD_LIBRARY_PATH=/glade/work/ssuresh/1810pgi/linux86-64/18.10/lib/:$LD_LIBRARY_PATH
-export LD_LIBRARY_PATH=/glade/work/ssuresh/1810pgi/linux86-64/18.10/mpi/openmpi-2.1.2/lib/:$LD_LIBRARY_PATH
-export PATH=/glade/work/ssuresh/1810pgi/linux86-64/18.10/mpi/openmpi-2.1.2/bin/:$PATH
-which mpif90
+module load PrgEnv/PGI+OpenMPI/2019-04-30 
+module load pio
 
-export PNETCDF=/glade/work/ssuresh/1810pgi/pgi1810_lib/libs-pgi1810/
-export NETCDF=/glade/work/ssuresh/1810pgi/pgi1810_lib/libs-pgi1810/
-export PIO=/glade/work/ssuresh/1810pgi/pgi1810_lib/libs-pgi1810/
-export MPAS_EXTERNAL_LIBS="-L/glade/work/ssuresh/1810pgi/pgi1810_lib/libs-pgi1810/lib/ -lhdf5_hl -lhdf5 -ldl -lz"
-export MPAS_EXTERNAL_INCLUDES="-I/glade/work/ssuresh/1810pgi/pgi1810_lib/libs-pgi1810/include"
+module list
+which mpif90
+mpif90 -V
+
 ulimit -s unlimited
 module list
-env
-sinfo
+export NETCDF=$NETCDF_C
+export NETCDFF=$NETCDF_F
 
 echo $LD_LIBRARY_PATH
-cd /glade/scratch/slaksh/mcworkshop/benchmark
-
+cd /gpfs/fs1/work/slaksh/pr31_merge/MPAS-A_benchmark_120km_L56
 echo $LDFLAGS
 export PGI_ACC_TIME=1
+export PGI_COMPARE=abs=1,verboseautocompare
+
+
 
 #the n argument here is number of tasks per node,
 export OMPI_MCA_btl_openib_if_include=mlx5_0
-#srun --mem=0 --mpi=pmix -N 1 --ntasks-per-node 4 ./atmosphere_model
-srun --mem=0 --mpi=pmix ./atmosphere_model
-
-
-
+mpirun -n 1 ./atmosphere_model
+#srun --mem=0 --mpi=pmix ./atmosphere_model
+#srun --mem=0 --mpi=pmix nvprof -o output.%h.%p.%q{OMPI_COMM_WORLD_RANK} ./atmosphere_model
